@@ -34,7 +34,7 @@
 const MAX_PER_GRADE = 3;
 
 /** Your school's name — shown in the kiosk header. */
-const SCHOOL_NAME = 'Riverside Middle School';
+const SCHOOL_NAME = 'Kate Collins Middle School';
 
 /**
  * ── DAILY LIMIT FEATURE (CURRENTLY DISABLED) ────────────────
