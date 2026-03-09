@@ -1,0 +1,1142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!--
+    user-scalable=no prevents accidental pinch-zoom on the kiosk touchscreen.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Digital Hall Pass</title>
+
+  <style>
+    /* ============================================================
+       BASE RESET & ROOT VARIABLES
+       ============================================================ */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --blue:        #2563eb;
+      --blue-dark:   #1d4ed8;
+      --blue-light:  #eff6ff;
+      --teal:        #0891b2;
+      --teal-dark:   #0e7490;
+      --green:       #059669;
+      --green-dark:  #047857;
+      --amber:       #d97706;
+      --amber-dark:  #b45309;
+      --red:         #dc2626;
+      --red-dark:    #b91c1c;
+      --slate-900:   #0f172a;
+      --slate-800:   #1e293b;
+      --slate-600:   #475569;
+      --slate-500:   #64748b;
+      --slate-300:   #cbd5e1;
+      --slate-200:   #e2e8f0;
+      --slate-100:   #f1f5f9;
+      --slate-50:    #f8fafc;
+      --white:       #ffffff;
+      --bg:          #dbeafe;   /* light blue page background */
+      --radius-sm:   10px;
+      --radius-md:   16px;
+      --radius-lg:   20px;
+      --shadow-sm:   0 2px 8px  rgba(0,0,0,.07);
+      --shadow-md:   0 4px 20px rgba(0,0,0,.09);
+      --shadow-lg:   0 8px 32px rgba(0,0,0,.12);
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                   'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      /* Prevent accidental text selection on a touchscreen kiosk */
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* ============================================================
+       MAIN LAYOUT WRAPPER
+       ============================================================ */
+    #app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 40px;
+      overflow-y: auto;
+    }
+
+    /* ============================================================
+       SCREEN MANAGEMENT
+       All four screens live in the DOM; we toggle .active to show one.
+       ============================================================ */
+    .screen {
+      display: none;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    .screen.active {
+      display: block;
+      animation: fadeUp .28s ease both;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+
+    /* ============================================================
+       SHARED: SCHOOL BANNER (top of every screen)
+       ============================================================ */
+    .banner {
+      text-align: center;
+      padding: 18px 0 20px;
+    }
+
+    .banner__school {
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .09em;
+      text-transform: uppercase;
+      color: var(--blue);
+    }
+
+    .banner__title {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--slate-800);
+      margin: 4px 0 6px;
+      line-height: 1.1;
+    }
+
+    .banner__sub {
+      font-size: .95rem;
+      color: var(--slate-500);
+    }
+
+    /* ============================================================
+       SHARED: CARD
+       ============================================================ */
+    .card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      padding: 28px 24px;
+    }
+
+    /* ============================================================
+       SCREEN 1 — SEARCH
+       ============================================================ */
+
+    /* Wrapper gives us space for the magnifying-glass icon */
+    .search-wrap {
+      position: relative;
+      margin-bottom: 14px;
+    }
+
+    .search-wrap__icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.2rem;
+      pointer-events: none;
+    }
+
+    #searchInput {
+      width: 100%;
+      padding: 17px 17px 17px 48px;
+      font-size: 1.2rem;
+      border: 2px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      outline: none;
+      color: var(--slate-800);
+      background: var(--slate-50);
+      transition: border-color .18s, box-shadow .18s;
+    }
+
+    #searchInput:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
+      background: var(--white);
+    }
+
+    #searchInput::placeholder { color: var(--slate-300); }
+
+    /* Results list — scrollable if many matches */
+    #resultsList {
+      border: 2px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      max-height: 380px;
+      overflow-y: auto;
+    }
+
+    .result-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--slate-100);
+      cursor: pointer;
+      transition: background .14s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .result-item:last-child { border-bottom: none; }
+
+    .result-item:hover,
+    .result-item:active { background: var(--blue-light); }
+
+    .result-item__name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--slate-800);
+    }
+
+    .result-item__grade {
+      font-size: .8rem;
+      font-weight: 700;
+      color: var(--blue);
+      background: var(--blue-light);
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+    }
+
+    #emptyState {
+      text-align: center;
+      padding: 28px;
+      color: var(--slate-500);
+      font-size: .95rem;
+    }
+
+    /* ============================================================
+       SCREEN 2 — DESTINATION
+       ============================================================ */
+    .greeting {
+      text-align: center;
+      margin-bottom: 22px;
+    }
+
+    .greeting__hi {
+      font-size: .95rem;
+      color: var(--slate-500);
+      margin-bottom: 2px;
+    }
+
+    .greeting__name {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--slate-800);
+    }
+
+    .dest-label {
+      text-align: center;
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--slate-600);
+      margin-bottom: 18px;
+    }
+
+    .dest-buttons { display: flex; flex-direction: column; gap: 14px; }
+
+    /* Each destination button is a large, colourful tap target */
+    .dest-btn {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      padding: 22px 28px;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--white);
+      text-align: left;
+      box-shadow: var(--shadow-md);
+      transition: transform .1s, box-shadow .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .dest-btn:active {
+      transform: scale(.97);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .dest-btn__icon { font-size: 2rem; }
+
+    .dest-btn--bathroom { background: linear-gradient(135deg, var(--teal),  var(--teal-dark));  }
+    .dest-btn--nurse    { background: linear-gradient(135deg, var(--green), var(--green-dark)); }
+    .dest-btn--office   { background: linear-gradient(135deg, var(--amber), var(--amber-dark)); }
+
+    .back-btn {
+      display: block;
+      width: 100%;
+      margin-top: 18px;
+      padding: 14px;
+      background: none;
+      border: 2px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--slate-500);
+      cursor: pointer;
+      transition: background .14s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .back-btn:hover { background: var(--slate-50); }
+
+    /* ============================================================
+       SCREEN 3 — ACTIVE PASS
+       ============================================================ */
+    .pass-card {
+      background: var(--white);
+      border-radius: var(--radius-lg);
+      overflow: hidden;       /* clips the coloured header */
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Blue gradient header — student's name lives here */
+    .pass-header {
+      background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+      color: var(--white);
+      text-align: center;
+      padding: 28px 24px 24px;
+    }
+
+    .pass-header__status {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      opacity: .8;
+      margin-bottom: 8px;
+    }
+
+    .pass-header__name {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    /* Body of the active pass card */
+    .pass-body {
+      padding: 28px 24px 32px;
+      text-align: center;
+    }
+
+    /* Pill showing where the student is going */
+    .pass-dest {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--slate-800);
+      background: var(--slate-100);
+      padding: 10px 24px;
+      border-radius: 50px;
+      margin-bottom: 30px;
+    }
+
+    .pass-dest__icon { font-size: 1.5rem; }
+
+    /* Timer */
+    .timer-label {
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      color: var(--slate-500);
+      margin-bottom: 6px;
+    }
+
+    #timerDisplay {
+      font-size: 5.5rem;
+      font-weight: 800;
+      color: var(--slate-800);
+      font-variant-numeric: tabular-nums;  /* keeps digits the same width */
+      line-height: 1;
+      transition: color .3s;
+    }
+
+    /*
+     * TIMER ALERT — turns the clock bold-red after 5 minutes (300 s).
+     * This is the "timer alert" feature from the requirements.
+     */
+    #timerDisplay.is-alert { color: var(--red); }
+
+    /* Warning banner shown alongside the red timer */
+    #timerAlert {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 18px;
+      background: #fef2f2;
+      border: 2px solid #fecaca;
+      border-radius: var(--radius-sm);
+      color: var(--red);
+      font-weight: 700;
+      font-size: .9rem;
+    }
+
+    #timerAlert.is-visible { display: block; }
+
+    /* Small "Signed out at HH:MM AM/PM" note */
+    #timeOutLabel {
+      margin-top: 18px;
+      font-size: .85rem;
+      color: var(--slate-500);
+    }
+
+    /* Big red "Return to Class" button */
+    #returnBtn {
+      display: block;
+      width: 100%;
+      margin-top: 28px;
+      padding: 22px;
+      background: linear-gradient(135deg, var(--red), var(--red-dark));
+      border: none;
+      border-radius: var(--radius-md);
+      color: var(--white);
+      font-size: 1.35rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(220,38,38,.35);
+      transition: transform .1s, box-shadow .15s;
+      letter-spacing: .02em;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    #returnBtn:active {
+      transform: scale(.97);
+      box-shadow: 0 2px 8px rgba(220,38,38,.2);
+    }
+
+    #returnBtn:disabled {
+      opacity: .65;
+      cursor: not-allowed;
+    }
+
+    /* ============================================================
+       SCREEN 4 — SUCCESS / RETURNED
+       ============================================================ */
+    .success-card {
+      text-align: center;
+      padding: 44px 28px;
+    }
+
+    .success-card__icon     { font-size: 3.5rem; margin-bottom: 14px; }
+    .success-card__title    { font-size: 1.75rem; font-weight: 800; color: var(--green);       margin-bottom: 6px; }
+    .success-card__name     { font-size: 1rem;    font-weight: 600; color: var(--slate-600);   margin-bottom: 8px; }
+    .success-card__duration { font-size: 1rem;    font-weight: 600; color: var(--slate-500);   margin-bottom: 30px; }
+
+    .next-btn {
+      padding: 18px 44px;
+      background: var(--blue);
+      color: var(--white);
+      border: none;
+      border-radius: var(--radius-md);
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(37,99,235,.3);
+      transition: background .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .next-btn:hover { background: var(--blue-dark); }
+
+    /* Auto-reset countdown hint */
+    #autoResetMsg {
+      margin-top: 14px;
+      font-size: .8rem;
+      color: var(--slate-300);
+    }
+
+    /* ============================================================
+       LOADING OVERLAY — covers the whole screen during server calls
+       ============================================================ */
+    #loadingOverlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(255,255,255,.75);
+      backdrop-filter: blur(3px);
+      z-index: 50;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    #loadingOverlay.is-visible { display: flex; }
+
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 5px solid var(--slate-200);
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin .75s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-msg {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--slate-600);
+    }
+
+    /* ============================================================
+       TOAST — slides up from the bottom for errors / notices
+       ============================================================ */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(120px); /* hidden off-screen */
+      background: var(--slate-800);
+      color: var(--white);
+      padding: 16px 26px;
+      border-radius: var(--radius-md);
+      font-size: .95rem;
+      font-weight: 600;
+      box-shadow: 0 8px 28px rgba(0,0,0,.2);
+      transition: transform .3s ease;
+      z-index: 100;
+      max-width: 92vw;
+      text-align: center;
+      white-space: pre-line;  /* respect \n in messages */
+    }
+
+    #toast.is-error   { background: var(--red); }
+    #toast.is-visible { transform: translateX(-50%) translateY(0); }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- ============================================================
+       LOADING OVERLAY
+       Shown while waiting for Apps Script server calls to complete.
+       ============================================================ -->
+  <div id="loadingOverlay" role="status" aria-live="polite">
+    <div class="spinner"></div>
+    <div class="loading-msg" id="loadingMsg">Please wait…</div>
+  </div>
+
+  <!-- ============================================================
+       TOAST NOTIFICATION
+       Slides up from the bottom to show errors or confirmations.
+       ============================================================ -->
+  <div id="toast" role="alert" aria-live="assertive"></div>
+
+  <!-- ============================================================
+       MAIN APP WRAPPER
+       ============================================================ -->
+  <div id="app">
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCREEN 1 — SEARCH
+         Student types their name or 5-6 digit lunch number.
+         ══════════════════════════════════════════════════════════ -->
+    <div id="searchScreen" class="screen active">
+
+      <div class="banner">
+        <div class="banner__school"><?= schoolName ?></div>
+        <h1 class="banner__title">Digital Hall Pass</h1>
+        <p  class="banner__sub">Type your name or lunch number to get started</p>
+      </div>
+
+      <div class="card">
+        <div class="search-wrap">
+          <span class="search-wrap__icon" aria-hidden="true">🔍</span>
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Name or lunch number…"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="words"
+            spellcheck="false"
+            aria-label="Search for your name or lunch number"
+          />
+        </div>
+
+        <!-- Student results appear here as the user types -->
+        <div id="resultsList"  style="display:none;"  role="list"></div>
+        <div id="emptyState"   style="display:none;">
+          😕 No students found — try a different spelling or your lunch number.
+        </div>
+      </div>
+
+    </div><!-- /#searchScreen -->
+
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCREEN 2 — DESTINATION SELECTION
+         Three large, colour-coded buttons.
+         ══════════════════════════════════════════════════════════ -->
+    <div id="destinationScreen" class="screen">
+
+      <div class="banner">
+        <div class="banner__school"><?= schoolName ?></div>
+        <h1 class="banner__title">Digital Hall Pass</h1>
+      </div>
+
+      <div class="card">
+        <div class="greeting">
+          <div class="greeting__hi">Welcome,</div>
+          <div class="greeting__name" id="greetingName"></div>
+        </div>
+
+        <p class="dest-label">Where are you going?</p>
+
+        <div class="dest-buttons">
+          <button
+            class="dest-btn dest-btn--bathroom"
+            onclick="selectDestination('Bathroom')"
+            aria-label="Bathroom">
+            <span class="dest-btn__icon" aria-hidden="true">🚻</span>
+            <span>Bathroom</span>
+          </button>
+
+          <button
+            class="dest-btn dest-btn--nurse"
+            onclick="selectDestination('Nurse')"
+            aria-label="Nurse's Office">
+            <span class="dest-btn__icon" aria-hidden="true">🏥</span>
+            <span>Nurse's Office</span>
+          </button>
+
+          <button
+            class="dest-btn dest-btn--office"
+            onclick="selectDestination('Office')"
+            aria-label="Main Office">
+            <span class="dest-btn__icon" aria-hidden="true">🏫</span>
+            <span>Main Office</span>
+          </button>
+        </div>
+
+        <button class="back-btn" onclick="goBack()">← Back to Search</button>
+      </div>
+
+    </div><!-- /#destinationScreen -->
+
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCREEN 3 — ACTIVE PASS
+         Shows the student's name, destination, and a live timer.
+         ══════════════════════════════════════════════════════════ -->
+    <div id="activeScreen" class="screen">
+
+      <div class="banner">
+        <div class="banner__school"><?= schoolName ?></div>
+      </div>
+
+      <div class="pass-card">
+
+        <!-- Coloured header with student name -->
+        <div class="pass-header">
+          <div class="pass-header__status">✅ Pass Active</div>
+          <div class="pass-header__name" id="passStudentName"></div>
+        </div>
+
+        <div class="pass-body">
+
+          <!-- Destination pill -->
+          <div class="pass-dest">
+            <span class="pass-dest__icon" id="passDestIcon" aria-hidden="true"></span>
+            <span id="passDestText"></span>
+          </div>
+
+          <!-- Live timer -->
+          <div class="timer-label">Time Away</div>
+          <div id="timerDisplay" aria-live="off">00:00</div>
+
+          <!--
+            Timer alert — hidden until the student exceeds 5 minutes.
+            When visible, the timer text above is also red and bold (via .is-alert).
+          -->
+          <div id="timerAlert" role="alert">
+            ⚠️ Please return to class — you've been gone too long!
+          </div>
+
+          <!-- Exact sign-out time for teacher reference -->
+          <div id="timeOutLabel"></div>
+
+          <!-- Large red return button -->
+          <button id="returnBtn" onclick="returnToClass()">
+            ✅ Return to Class
+          </button>
+
+        </div><!-- /.pass-body -->
+      </div><!-- /.pass-card -->
+
+    </div><!-- /#activeScreen -->
+
+
+    <!-- ══════════════════════════════════════════════════════════
+         SCREEN 4 — SUCCESS (RETURNED)
+         Shown briefly after the student checks back in.
+         Auto-resets to Screen 1 after 8 seconds.
+         ══════════════════════════════════════════════════════════ -->
+    <div id="successScreen" class="screen">
+
+      <div class="banner">
+        <div class="banner__school"><?= schoolName ?></div>
+      </div>
+
+      <div class="card success-card">
+        <div class="success-card__icon" aria-hidden="true">🎉</div>
+        <div class="success-card__title">Welcome Back!</div>
+        <div class="success-card__name"     id="successName"></div>
+        <div class="success-card__duration" id="successDuration"></div>
+        <button class="next-btn" onclick="resetKiosk()">
+          Done — Next Student
+        </button>
+        <div id="autoResetMsg"></div>
+      </div>
+
+    </div><!-- /#successScreen -->
+
+  </div><!-- /#app -->
+
+
+  <script>
+    // ============================================================
+    //  CLIENT-SIDE STATE
+    // ============================================================
+
+    /** The student who is currently interacting with the kiosk. */
+    let selectedStudent = null;     // { id, name, grade }
+
+    /**
+     * ISO timestamp returned by the server when the pass was issued.
+     * We convert this to a Date object and use it to drive the live timer.
+     * Using the server timestamp (instead of a local one) avoids clock-drift
+     * if the Chromebook's clock is slightly off.
+     */
+    let passTimeOut = null;         // Date
+
+    /** Handle returned by setInterval() for the live timer. */
+    let timerInterval = null;
+
+    /**
+     * Handle returned by setTimeout() for the search debounce.
+     * We wait 300 ms after the last keypress before hitting the server.
+     */
+    let searchDebounce = null;
+
+    /** Handle for the auto-reset countdown on the success screen. */
+    let autoResetTimeout = null;
+
+    // ── Destination display helpers ──────────────────────────────
+    const DEST_ICON  = { Bathroom: '🚻', Nurse: '🏥', Office: '🏫' };
+    const DEST_LABEL = { Bathroom: 'Bathroom', Nurse: "Nurse's Office", Office: 'Main Office' };
+
+
+    // ============================================================
+    //  SCREEN MANAGEMENT
+    // ============================================================
+
+    /**
+     * Shows one screen and hides the rest.
+     * @param {string} id  - The id attribute of the screen div.
+     */
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+
+    // ============================================================
+    //  LOADING OVERLAY
+    // ============================================================
+
+    function showLoading(msg) {
+      document.getElementById('loadingMsg').textContent = msg || 'Please wait…';
+      document.getElementById('loadingOverlay').classList.add('is-visible');
+    }
+
+    function hideLoading() {
+      document.getElementById('loadingOverlay').classList.remove('is-visible');
+    }
+
+
+    // ============================================================
+    //  TOAST NOTIFICATIONS
+    // ============================================================
+
+    let _toastTimer = null;
+
+    /**
+     * Slides a message up from the bottom of the screen.
+     * @param {string}  message  - Text to display.
+     * @param {boolean} isError  - If true, uses a red background.
+     * @param {number}  duration - How long to show it (ms).  Default 4500.
+     */
+    function showToast(message, isError, duration) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.className   = 'is-visible' + (isError ? ' is-error' : '');
+
+      if (_toastTimer) clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => { el.className = ''; }, duration || 4500);
+    }
+
+
+    // ============================================================
+    //  SCREEN 1 — SEARCH LOGIC
+    // ============================================================
+
+    document.getElementById('searchInput').addEventListener('input', function () {
+      const q = this.value.trim();
+
+      // Clear previous debounce
+      if (searchDebounce) clearTimeout(searchDebounce);
+
+      if (q.length < 2) {
+        // Hide both the list and the empty-state message
+        document.getElementById('resultsList').style.display  = 'none';
+        document.getElementById('emptyState').style.display   = 'none';
+        return;
+      }
+
+      // Wait 300 ms after typing stops before calling the server.
+      // This reduces the number of round-trips when the student is
+      // still in the middle of typing.
+      searchDebounce = setTimeout(() => _doSearch(q), 300);
+    });
+
+    /** Calls the Apps Script searchStudents() function. */
+    function _doSearch(query) {
+      google.script.run
+        .withSuccessHandler(_renderResults)
+        .withFailureHandler(err => showToast('Search error — please try again.', true))
+        .searchStudents(query);
+    }
+
+    /**
+     * Builds the results list from the array returned by the server.
+     * @param {Array<{id,name,grade}>} students
+     */
+    function _renderResults(students) {
+      const list     = document.getElementById('resultsList');
+      const empty    = document.getElementById('emptyState');
+      list.innerHTML = '';
+
+      if (!students || students.length === 0) {
+        list.style.display  = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+
+      empty.style.display = 'none';
+      list.style.display  = 'block';
+
+      students.forEach(student => {
+        const item = document.createElement('div');
+        item.className   = 'result-item';
+        item.setAttribute('role', 'listitem');
+        item.innerHTML   =
+          '<span class="result-item__name">'  + _esc(student.name)              + '</span>' +
+          '<span class="result-item__grade">Grade ' + _esc(String(student.grade)) + '</span>';
+
+        // Using addEventListener keeps onclick out of the generated HTML
+        // and avoids needing to pass complex objects as HTML attributes.
+        item.addEventListener('click', () => _selectStudent(student));
+        list.appendChild(item);
+      });
+    }
+
+    /**
+     * Called when the student taps their name in the results list.
+     * Saves state and advances to the destination screen.
+     *
+     * @param {{ id, name, grade }} student
+     */
+    function _selectStudent(student) {
+      selectedStudent = student;
+
+      // Populate the greeting on the next screen
+      document.getElementById('greetingName').textContent = student.name;
+
+      // Clear the search field so it's fresh for the next user
+      document.getElementById('searchInput').value       = '';
+      document.getElementById('resultsList').style.display = 'none';
+      document.getElementById('emptyState').style.display  = 'none';
+
+      showScreen('destinationScreen');
+    }
+
+
+    // ============================================================
+    //  SCREEN 2 — DESTINATION SELECTION
+    // ============================================================
+
+    /**
+     * Called when the student taps one of the three destination buttons.
+     * Issues the pass via Apps Script after server-side validation.
+     *
+     * @param {'Bathroom'|'Nurse'|'Office'} destination
+     */
+    function selectDestination(destination) {
+      if (!selectedStudent) { resetKiosk(); return; }
+
+      showLoading('Checking hallway capacity…');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          hideLoading();
+          if (result.success) {
+            // Server approved — start the active-pass screen
+            passTimeOut = new Date(result.timeOut);
+            _showActivePass(selectedStudent, destination, passTimeOut);
+          } else {
+            // Server rejected — show the reason (e.g. capacity exceeded)
+            showToast(result.message, true, 6000);
+          }
+        })
+        .withFailureHandler(err => {
+          hideLoading();
+          showToast('Something went wrong. Please try again.', true);
+          console.error('issuePass error:', err);
+        })
+        .issuePass(selectedStudent, destination);
+    }
+
+    /** "Back to Search" button handler. */
+    function goBack() {
+      selectedStudent = null;
+      document.getElementById('searchInput').value        = '';
+      document.getElementById('resultsList').style.display = 'none';
+      document.getElementById('emptyState').style.display  = 'none';
+      showScreen('searchScreen');
+      // Small delay so the screen transition finishes before the keyboard pops
+      setTimeout(() => document.getElementById('searchInput').focus(), 280);
+    }
+
+
+    // ============================================================
+    //  SCREEN 3 — ACTIVE PASS & LIVE TIMER
+    // ============================================================
+
+    /**
+     * Populates the active-pass card and starts the live timer.
+     *
+     * @param {{ id, name, grade }} student
+     * @param {string}             destination
+     * @param {Date}               timeOut       Server-issued timestamp
+     */
+    function _showActivePass(student, destination, timeOut) {
+      // Populate card fields
+      document.getElementById('passStudentName').textContent = student.name;
+      document.getElementById('passDestIcon').textContent    = DEST_ICON[destination]  || '📍';
+      document.getElementById('passDestText').textContent    = DEST_LABEL[destination] || destination;
+
+      // Format time-out label  e.g. "Signed out at 2:35 PM"
+      const h    = timeOut.getHours();
+      const min  = String(timeOut.getMinutes()).padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12  = h % 12 || 12;
+      document.getElementById('timeOutLabel').textContent =
+        'Signed out at ' + h12 + ':' + min + ' ' + ampm;
+
+      // Reset timer state
+      document.getElementById('timerDisplay').textContent = '00:00';
+      document.getElementById('timerDisplay').classList.remove('is-alert');
+      document.getElementById('timerAlert').classList.remove('is-visible');
+      document.getElementById('returnBtn').disabled = false;
+
+      showScreen('activeScreen');
+      _startTimer(timeOut);
+    }
+
+    /**
+     * Starts an interval that updates the on-screen timer every second.
+     * After 5 minutes (300 seconds) the timer turns bold-red.
+     *
+     * @param {Date} startTime
+     */
+    function _startTimer(startTime) {
+      _stopTimer(); // clear any existing interval first
+
+      timerInterval = setInterval(() => {
+        const elapsed  = Math.floor((Date.now() - startTime.getTime()) / 1000);
+        const mins     = Math.floor(elapsed / 60);
+        const secs     = elapsed % 60;
+        const display  = String(mins).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+
+        const timerEl  = document.getElementById('timerDisplay');
+        const alertEl  = document.getElementById('timerAlert');
+
+        timerEl.textContent = display;
+
+        // ── 5-MINUTE ALERT ──────────────────────────────────────
+        // Requirements: "If the live timer exceeds 5 minutes, the
+        // timer text should turn bold red."
+        if (elapsed >= 300) {           // 300 seconds = 5 minutes
+          timerEl.classList.add('is-alert');
+          alertEl.classList.add('is-visible');
+        } else {
+          timerEl.classList.remove('is-alert');
+          alertEl.classList.remove('is-visible');
+        }
+      }, 1000);
+    }
+
+    function _stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+
+    // ============================================================
+    //  SCREEN 4 — RETURN TO CLASS
+    // ============================================================
+
+    /**
+     * Called when the student taps "Return to Class".
+     * Calls the Apps Script returnStudent() function, which logs
+     * the completed trip to the Pass Log sheet.
+     */
+    function returnToClass() {
+      if (!selectedStudent) { resetKiosk(); return; }
+
+      // Disable the button immediately to prevent double-taps
+      document.getElementById('returnBtn').disabled = true;
+      _stopTimer();
+
+      showLoading('Logging your return…');
+
+      google.script.run
+        .withSuccessHandler(result => {
+          hideLoading();
+          if (result.success) {
+            _showSuccessScreen(selectedStudent.name, result.duration);
+          } else {
+            // Unexpected failure — let the student try again
+            document.getElementById('returnBtn').disabled = false;
+            showToast(result.message, true);
+            _startTimer(passTimeOut); // restart the timer
+          }
+        })
+        .withFailureHandler(err => {
+          hideLoading();
+          document.getElementById('returnBtn').disabled = false;
+          showToast('Could not log your return. Please tell your teacher.', true);
+          _startTimer(passTimeOut); // restart the timer
+          console.error('returnStudent error:', err);
+        })
+        .returnStudent(selectedStudent.id);
+    }
+
+    /**
+     * Fills in the success screen and sets an 8-second auto-reset.
+     *
+     * @param {string} name
+     * @param {string} duration  e.g. "4.72 minutes" (from server)
+     */
+    function _showSuccessScreen(name, duration) {
+      document.getElementById('successName').textContent     = name + ' has returned to class.';
+      document.getElementById('successDuration').textContent =
+        duration ? 'Total time away: ' + duration : '';
+
+      showScreen('successScreen');
+
+      // Auto-reset countdown
+      let secs = 8;
+      document.getElementById('autoResetMsg').textContent =
+        'This screen will reset in ' + secs + ' seconds…';
+
+      const countInterval = setInterval(() => {
+        secs--;
+        if (secs > 0) {
+          document.getElementById('autoResetMsg').textContent =
+            'This screen will reset in ' + secs + ' seconds…';
+        } else {
+          clearInterval(countInterval);
+        }
+      }, 1000);
+
+      autoResetTimeout = setTimeout(() => {
+        clearInterval(countInterval);
+        resetKiosk();
+      }, 8000);
+    }
+
+
+    // ============================================================
+    //  RESET THE KIOSK
+    //  Called manually by the "Done — Next Student" button,
+    //  OR automatically after 8 seconds on the success screen.
+    // ============================================================
+
+    function resetKiosk() {
+      // Cancel any pending timeouts/intervals
+      _stopTimer();
+      if (autoResetTimeout) { clearTimeout(autoResetTimeout); autoResetTimeout = null; }
+
+      // Clear state
+      selectedStudent = null;
+      passTimeOut     = null;
+
+      // Reset all form fields
+      document.getElementById('searchInput').value        = '';
+      document.getElementById('resultsList').style.display = 'none';
+      document.getElementById('emptyState').style.display  = 'none';
+      document.getElementById('returnBtn').disabled        = false;
+
+      showScreen('searchScreen');
+
+      // Restore keyboard focus to the search box
+      setTimeout(() => document.getElementById('searchInput').focus(), 280);
+    }
+
+
+    // ============================================================
+    //  UTILITY: XSS-safe HTML escaping
+    //  Used whenever we insert untrusted (server-returned) text
+    //  into innerHTML.  Direct textContent assignments are already safe.
+    // ============================================================
+
+    function _esc(str) {
+      return String(str)
+        .replace(/&/g,  '&amp;')
+        .replace(/</g,  '&lt;')
+        .replace(/>/g,  '&gt;')
+        .replace(/"/g,  '&quot;')
+        .replace(/'/g,  '&#039;');
+    }
+
+
+    // ============================================================
+    //  KIOSK MODE HARDENING
+    // ============================================================
+
+    // Disable right-click context menu (prevents students from
+    // inspecting or navigating away).
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    // Auto-focus the search box when the page first loads.
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('searchInput').focus(), 400);
+    });
+
+  </script>
+
+</body>
+</html>
