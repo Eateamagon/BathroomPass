@@ -8,9 +8,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Digital Hall Pass</title>
 
+  <!-- Bauhaus geometric sans-serif typeface -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;900&display=swap" rel="stylesheet">
+
   <style>
     /* ============================================================
-       BASE RESET & ROOT VARIABLES
+       BASE RESET & BAUHAUS DESIGN TOKENS
        ============================================================ */
     *, *::before, *::after {
       box-sizing: border-box;
@@ -19,41 +24,29 @@
     }
 
     :root {
-      --blue:        #2563eb;
-      --blue-dark:   #1d4ed8;
-      --blue-light:  #eff6ff;
-      --teal:        #0891b2;
-      --teal-dark:   #0e7490;
-      --green:       #059669;
-      --green-dark:  #047857;
-      --amber:       #d97706;
-      --amber-dark:  #b45309;
-      --red:         #dc2626;
-      --red-dark:    #b91c1c;
-      --slate-900:   #0f172a;
-      --slate-800:   #1e293b;
-      --slate-600:   #475569;
-      --slate-500:   #64748b;
-      --slate-300:   #cbd5e1;
-      --slate-200:   #e2e8f0;
-      --slate-100:   #f1f5f9;
-      --slate-50:    #f8fafc;
-      --white:       #ffffff;
-      --bg:          #dbeafe;   /* light blue page background */
-      --radius-sm:   10px;
-      --radius-md:   16px;
-      --radius-lg:   20px;
-      --shadow-sm:   0 2px 8px  rgba(0,0,0,.07);
-      --shadow-md:   0 4px 20px rgba(0,0,0,.09);
-      --shadow-lg:   0 8px 32px rgba(0,0,0,.12);
+      /* Bauhaus Primary Palette */
+      --red:         #D02020;
+      --blue:        #1040C0;
+      --yellow:      #F0C020;
+      --black:       #121212;
+      --white:       #FFFFFF;
+      --bg:          #F0F0F0;
+      --muted:       #E0E0E0;
+
+      /* Borders & Shadows — constructivist, hard-edged */
+      --border-sm:   2px;
+      --border-lg:   4px;
+      --shadow-sm:   3px 3px 0px 0px var(--black);
+      --shadow-md:   6px 6px 0px 0px var(--black);
+      --shadow-lg:   8px 8px 0px 0px var(--black);
     }
 
     html, body {
       height: 100%;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-                   'Helvetica Neue', Arial, sans-serif;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 500;
       background: var(--bg);
-      /* Prevent accidental text selection on a touchscreen kiosk */
+      color: var(--black);
       user-select: none;
       -webkit-user-select: none;
     }
@@ -68,72 +61,142 @@
       align-items: center;
       padding: 24px 16px 40px;
       overflow-y: auto;
+      position: relative;
+    }
+
+    /* Subtle dot grid background pattern — Bauhaus texture */
+    #app::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(var(--black) 1px, transparent 1px);
+      background-size: 24px 24px;
+      opacity: 0.04;
+      pointer-events: none;
+      z-index: 0;
     }
 
     /* ============================================================
        SCREEN MANAGEMENT
-       All four screens live in the DOM; we toggle .active to show one.
        ============================================================ */
     .screen {
       display: none;
       width: 100%;
       max-width: 600px;
+      position: relative;
+      z-index: 1;
     }
 
     .screen.active {
       display: block;
-      animation: fadeUp .28s ease both;
+      animation: fadeUp .2s ease-out both;
     }
 
     @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0);    }
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0);   }
     }
 
     /* ============================================================
-       SHARED: SCHOOL BANNER (top of every screen)
+       BAUHAUS GEOMETRIC LOGO — three shapes as brand identity
+       ============================================================ */
+    .bauhaus-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .bauhaus-logo__circle {
+      width: 16px;
+      height: 16px;
+      border-radius: 9999px;
+      background: var(--red);
+      border: var(--border-sm) solid var(--black);
+    }
+
+    .bauhaus-logo__square {
+      width: 16px;
+      height: 16px;
+      border-radius: 0;
+      background: var(--blue);
+      border: var(--border-sm) solid var(--black);
+    }
+
+    .bauhaus-logo__triangle {
+      width: 0;
+      height: 0;
+      border-left: 9px solid transparent;
+      border-right: 9px solid transparent;
+      border-bottom: 16px solid var(--yellow);
+      position: relative;
+    }
+
+    /* ============================================================
+       SHARED: SCHOOL BANNER — constructivist typography
        ============================================================ */
     .banner {
       text-align: center;
-      padding: 18px 0 20px;
+      padding: 16px 0 20px;
+      border-bottom: var(--border-lg) solid var(--black);
+      margin-bottom: 24px;
     }
 
     .banner__school {
-      font-size: .8rem;
+      font-size: .75rem;
       font-weight: 700;
-      letter-spacing: .09em;
+      letter-spacing: .15em;
       text-transform: uppercase;
       color: var(--blue);
     }
 
     .banner__title {
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--slate-800);
-      margin: 4px 0 6px;
-      line-height: 1.1;
+      font-size: 2.25rem;
+      font-weight: 900;
+      color: var(--black);
+      text-transform: uppercase;
+      letter-spacing: -0.03em;
+      line-height: 0.9;
+      margin: 6px 0;
     }
 
     .banner__sub {
-      font-size: .95rem;
-      color: var(--slate-500);
+      font-size: .9rem;
+      font-weight: 500;
+      color: var(--black);
+      opacity: 0.6;
+      text-transform: uppercase;
+      letter-spacing: .05em;
     }
 
     /* ============================================================
-       SHARED: CARD
+       SHARED: CARD — Bauhaus style with thick borders & hard shadow
        ============================================================ */
     .card {
       background: var(--white);
-      border-radius: var(--radius-lg);
-      box-shadow: var(--shadow-md);
+      border: var(--border-lg) solid var(--black);
+      border-radius: 0;
+      box-shadow: var(--shadow-lg);
       padding: 28px 24px;
+      position: relative;
+    }
+
+    /* Geometric corner decoration on cards */
+    .card::after {
+      content: '';
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 12px;
+      height: 12px;
+      background: var(--red);
+      border-radius: 9999px;
     }
 
     /* ============================================================
        SCREEN 1 — SEARCH
        ============================================================ */
-
-    /* Wrapper gives us space for the magnifying-glass icon */
     .search-wrap {
       position: relative;
       margin-bottom: 14px;
@@ -150,28 +213,34 @@
 
     #searchInput {
       width: 100%;
-      padding: 17px 17px 17px 48px;
-      font-size: 1.2rem;
-      border: 2px solid var(--slate-200);
-      border-radius: var(--radius-md);
+      padding: 16px 16px 16px 48px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 500;
+      border: var(--border-lg) solid var(--black);
+      border-radius: 0;
       outline: none;
-      color: var(--slate-800);
-      background: var(--slate-50);
-      transition: border-color .18s, box-shadow .18s;
+      color: var(--black);
+      background: var(--white);
+      transition: box-shadow .2s ease-out;
     }
 
     #searchInput:focus {
-      border-color: var(--blue);
-      box-shadow: 0 0 0 4px rgba(37,99,235,.12);
-      background: var(--white);
+      box-shadow: var(--shadow-sm);
     }
 
-    #searchInput::placeholder { color: var(--slate-300); }
+    #searchInput::placeholder {
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      font-weight: 700;
+      font-size: .9rem;
+    }
 
-    /* Results list — scrollable if many matches */
+    /* Results list */
     #resultsList {
-      border: 2px solid var(--slate-200);
-      border-radius: var(--radius-md);
+      border: var(--border-lg) solid var(--black);
+      border-radius: 0;
       overflow: hidden;
       max-height: 380px;
       overflow-y: auto;
@@ -181,39 +250,50 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 18px 20px;
-      border-bottom: 1px solid var(--slate-100);
+      padding: 16px 20px;
+      border-bottom: var(--border-sm) solid var(--black);
       cursor: pointer;
-      transition: background .14s;
+      transition: background .15s ease-out, transform .15s ease-out;
       -webkit-tap-highlight-color: transparent;
     }
 
     .result-item:last-child { border-bottom: none; }
 
     .result-item:hover,
-    .result-item:active { background: var(--blue-light); }
+    .result-item:active {
+      background: var(--yellow);
+    }
 
     .result-item__name {
-      font-size: 1.1rem;
-      font-weight: 600;
-      color: var(--slate-800);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--black);
+      text-transform: uppercase;
+      letter-spacing: .02em;
     }
 
     .result-item__grade {
-      font-size: .8rem;
+      font-size: .75rem;
       font-weight: 700;
-      color: var(--blue);
-      background: var(--blue-light);
-      padding: 4px 10px;
-      border-radius: 20px;
+      color: var(--white);
+      background: var(--blue);
+      padding: 4px 12px;
+      border-radius: 0;
+      border: var(--border-sm) solid var(--black);
+      text-transform: uppercase;
+      letter-spacing: .05em;
       white-space: nowrap;
     }
 
     #emptyState {
       text-align: center;
       padding: 28px;
-      color: var(--slate-500);
-      font-size: .95rem;
+      color: var(--black);
+      font-size: .9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      opacity: 0.5;
     }
 
     /* ============================================================
@@ -221,109 +301,218 @@
        ============================================================ */
     .greeting {
       text-align: center;
-      margin-bottom: 22px;
+      margin-bottom: 24px;
     }
 
     .greeting__hi {
-      font-size: .95rem;
-      color: var(--slate-500);
+      font-size: .85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--black);
+      opacity: 0.5;
       margin-bottom: 2px;
     }
 
     .greeting__name {
-      font-size: 1.75rem;
-      font-weight: 800;
-      color: var(--slate-800);
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--black);
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      line-height: 0.95;
     }
 
     .dest-label {
       text-align: center;
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--slate-600);
-      margin-bottom: 18px;
+      font-size: .85rem;
+      font-weight: 700;
+      color: var(--black);
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: var(--border-sm) solid var(--black);
     }
 
-    .dest-buttons { display: flex; flex-direction: column; gap: 14px; }
+    .dest-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
 
-    /* Each destination button is a large, colourful tap target */
+    /* Destination buttons — Bauhaus color-blocked, hard shadow */
     .dest-btn {
       display: flex;
       align-items: center;
-      gap: 18px;
-      padding: 22px 28px;
-      border: none;
-      border-radius: var(--radius-md);
+      gap: 16px;
+      padding: 20px 24px;
+      border: var(--border-lg) solid var(--black);
+      border-radius: 0;
       cursor: pointer;
-      font-size: 1.35rem;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
       font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
       color: var(--white);
       text-align: left;
       box-shadow: var(--shadow-md);
-      transition: transform .1s, box-shadow .15s;
+      transition: transform .15s ease-out, box-shadow .15s ease-out;
       -webkit-tap-highlight-color: transparent;
+      position: relative;
     }
 
     .dest-btn:active {
-      transform: scale(.97);
-      box-shadow: var(--shadow-sm);
+      transform: translate(4px, 4px);
+      box-shadow: none;
     }
 
-    .dest-btn__icon { font-size: 2rem; }
+    .dest-btn:hover {
+      opacity: 0.92;
+    }
 
-    .dest-btn--bathroom { background: linear-gradient(135deg, var(--teal),  var(--teal-dark));  }
-    .dest-btn--nurse    { background: linear-gradient(135deg, var(--green), var(--green-dark)); }
-    .dest-btn--office   { background: linear-gradient(135deg, var(--amber), var(--amber-dark)); }
+    .dest-btn__icon { font-size: 1.8rem; }
+
+    /* Geometric shape indicators on each button */
+    .dest-btn::after {
+      content: '';
+      position: absolute;
+      right: 20px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .dest-btn--bathroom {
+      background: var(--blue);
+    }
+
+    .dest-btn--bathroom::after {
+      width: 14px;
+      height: 14px;
+      border-radius: 9999px;
+      background: var(--white);
+      opacity: 0.3;
+    }
+
+    .dest-btn--nurse {
+      background: var(--red);
+    }
+
+    .dest-btn--nurse::after {
+      width: 14px;
+      height: 14px;
+      border-radius: 0;
+      background: var(--white);
+      opacity: 0.3;
+    }
+
+    .dest-btn--office {
+      background: var(--yellow);
+      color: var(--black);
+    }
+
+    .dest-btn--office::after {
+      width: 14px;
+      height: 14px;
+      border-radius: 0;
+      background: var(--black);
+      opacity: 0.15;
+      transform: translateY(-50%) rotate(45deg);
+    }
 
     .back-btn {
       display: block;
       width: 100%;
-      margin-top: 18px;
+      margin-top: 16px;
       padding: 14px;
-      background: none;
-      border: 2px solid var(--slate-200);
-      border-radius: var(--radius-md);
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--slate-500);
+      background: var(--white);
+      border: var(--border-sm) solid var(--black);
+      border-radius: 0;
+      font-family: 'Outfit', sans-serif;
+      font-size: .9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--black);
       cursor: pointer;
-      transition: background .14s;
+      box-shadow: var(--shadow-sm);
+      transition: transform .15s ease-out, box-shadow .15s ease-out;
       -webkit-tap-highlight-color: transparent;
     }
 
-    .back-btn:hover { background: var(--slate-50); }
+    .back-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+    }
 
     /* ============================================================
        SCREEN 3 — ACTIVE PASS
        ============================================================ */
     .pass-card {
       background: var(--white);
-      border-radius: var(--radius-lg);
-      overflow: hidden;       /* clips the coloured header */
+      border: var(--border-lg) solid var(--black);
+      border-radius: 0;
+      overflow: hidden;
       box-shadow: var(--shadow-lg);
+      position: relative;
     }
 
-    /* Blue gradient header — student's name lives here */
+    /* Blue header — constructivist block */
     .pass-header {
-      background: linear-gradient(135deg, var(--blue), var(--blue-dark));
+      background: var(--blue);
       color: var(--white);
       text-align: center;
       padding: 28px 24px 24px;
+      border-bottom: var(--border-lg) solid var(--black);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative geometric shapes in pass header */
+    .pass-header::before {
+      content: '';
+      position: absolute;
+      top: -20px;
+      right: -20px;
+      width: 60px;
+      height: 60px;
+      border-radius: 9999px;
+      background: var(--white);
+      opacity: 0.1;
+    }
+
+    .pass-header::after {
+      content: '';
+      position: absolute;
+      bottom: -15px;
+      left: 20px;
+      width: 30px;
+      height: 30px;
+      background: var(--yellow);
+      opacity: 0.2;
+      transform: rotate(45deg);
     }
 
     .pass-header__status {
-      font-size: .75rem;
+      font-size: .7rem;
       font-weight: 700;
-      letter-spacing: .1em;
+      letter-spacing: .15em;
       text-transform: uppercase;
-      opacity: .8;
+      opacity: .7;
       margin-bottom: 8px;
+      position: relative;
+      z-index: 1;
     }
 
     .pass-header__name {
-      font-size: 2rem;
-      font-weight: 800;
-      line-height: 1.1;
+      font-size: 2.25rem;
+      font-weight: 900;
+      line-height: 0.9;
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      position: relative;
+      z-index: 1;
     }
 
     /* Body of the active pass card */
@@ -332,95 +521,104 @@
       text-align: center;
     }
 
-    /* Pill showing where the student is going */
+    /* Destination pill — Bauhaus style with border */
     .pass-dest {
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      font-size: 1.2rem;
+      font-size: 1.1rem;
       font-weight: 700;
-      color: var(--slate-800);
-      background: var(--slate-100);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--black);
+      background: var(--yellow);
       padding: 10px 24px;
-      border-radius: 50px;
-      margin-bottom: 30px;
+      border: var(--border-sm) solid var(--black);
+      border-radius: 0;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow-sm);
     }
 
-    .pass-dest__icon { font-size: 1.5rem; }
+    .pass-dest__icon { font-size: 1.4rem; }
 
     /* Timer */
     .timer-label {
-      font-size: .8rem;
+      font-size: .7rem;
       font-weight: 700;
-      letter-spacing: .07em;
+      letter-spacing: .15em;
       text-transform: uppercase;
-      color: var(--slate-500);
+      color: var(--black);
+      opacity: 0.5;
       margin-bottom: 6px;
     }
 
     #timerDisplay {
-      font-size: 5.5rem;
-      font-weight: 800;
-      color: var(--slate-800);
-      font-variant-numeric: tabular-nums;  /* keeps digits the same width */
+      font-size: 5rem;
+      font-weight: 900;
+      color: var(--black);
+      font-variant-numeric: tabular-nums;
       line-height: 1;
-      transition: color .3s;
+      letter-spacing: -0.04em;
+      transition: color .2s ease-out;
     }
 
-    /*
-     * TIMER ALERT — turns the clock bold-red after 5 minutes (300 s).
-     * This is the "timer alert" feature from the requirements.
-     */
     #timerDisplay.is-alert { color: var(--red); }
 
-    /* Warning banner shown alongside the red timer */
+    /* Warning banner — Bauhaus red block */
     #timerAlert {
       display: none;
       margin-top: 14px;
       padding: 10px 18px;
-      background: #fef2f2;
-      border: 2px solid #fecaca;
-      border-radius: var(--radius-sm);
-      color: var(--red);
+      background: var(--red);
+      border: var(--border-sm) solid var(--black);
+      border-radius: 0;
+      color: var(--white);
       font-weight: 700;
-      font-size: .9rem;
+      font-size: .85rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
     }
 
     #timerAlert.is-visible { display: block; }
 
-    /* Small "Signed out at HH:MM AM/PM" note */
     #timeOutLabel {
       margin-top: 18px;
-      font-size: .85rem;
-      color: var(--slate-500);
+      font-size: .8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--black);
+      opacity: 0.4;
     }
 
-    /* Big red "Return to Class" button */
+    /* Return to Class button — bold red Bauhaus button */
     #returnBtn {
       display: block;
       width: 100%;
       margin-top: 28px;
-      padding: 22px;
-      background: linear-gradient(135deg, var(--red), var(--red-dark));
-      border: none;
-      border-radius: var(--radius-md);
+      padding: 20px;
+      background: var(--red);
+      border: var(--border-lg) solid var(--black);
+      border-radius: 0;
       color: var(--white);
-      font-size: 1.35rem;
-      font-weight: 800;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: .06em;
       cursor: pointer;
-      box-shadow: 0 4px 16px rgba(220,38,38,.35);
-      transition: transform .1s, box-shadow .15s;
-      letter-spacing: .02em;
+      box-shadow: var(--shadow-md);
+      transition: transform .15s ease-out, box-shadow .15s ease-out;
       -webkit-tap-highlight-color: transparent;
     }
 
     #returnBtn:active {
-      transform: scale(.97);
-      box-shadow: 0 2px 8px rgba(220,38,38,.2);
+      transform: translate(4px, 4px);
+      box-shadow: none;
     }
 
     #returnBtn:disabled {
-      opacity: .65;
+      opacity: .5;
       cursor: not-allowed;
     }
 
@@ -429,46 +627,117 @@
        ============================================================ */
     .success-card {
       text-align: center;
-      padding: 44px 28px;
+      padding: 40px 28px;
+      position: relative;
     }
 
-    .success-card__icon     { font-size: 3.5rem; margin-bottom: 14px; }
-    .success-card__title    { font-size: 1.75rem; font-weight: 800; color: var(--green);       margin-bottom: 6px; }
-    .success-card__name     { font-size: 1rem;    font-weight: 600; color: var(--slate-600);   margin-bottom: 8px; }
-    .success-card__duration { font-size: 1rem;    font-weight: 600; color: var(--slate-500);   margin-bottom: 30px; }
+    /* Override the default card corner decoration for success — use blue square */
+    .success-card.card::after {
+      background: var(--blue);
+      border-radius: 0;
+      width: 14px;
+      height: 14px;
+    }
+
+    /* Decorative geometric composition on success card */
+    .success-card::before {
+      content: '';
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      width: 20px;
+      height: 20px;
+      background: var(--yellow);
+      transform: rotate(45deg);
+      opacity: 0.3;
+    }
+
+    .success-card__icon {
+      font-size: 3rem;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .success-card__title {
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--black);
+      text-transform: uppercase;
+      letter-spacing: -0.02em;
+      line-height: 0.95;
+      margin-bottom: 8px;
+    }
+
+    /* Green accent bar under title */
+    .success-card__title::after {
+      content: '';
+      display: block;
+      width: 60px;
+      height: 4px;
+      background: var(--yellow);
+      margin: 8px auto 0;
+    }
+
+    .success-card__name {
+      font-size: .9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--black);
+      opacity: 0.6;
+      margin-bottom: 6px;
+    }
+
+    .success-card__duration {
+      font-size: .9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--black);
+      opacity: 0.4;
+      margin-bottom: 28px;
+    }
 
     .next-btn {
-      padding: 18px 44px;
+      padding: 16px 40px;
       background: var(--blue);
       color: var(--white);
-      border: none;
-      border-radius: var(--radius-md);
-      font-size: 1.1rem;
+      border: var(--border-lg) solid var(--black);
+      border-radius: 0;
+      font-family: 'Outfit', sans-serif;
+      font-size: 1rem;
       font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
       cursor: pointer;
-      box-shadow: 0 4px 14px rgba(37,99,235,.3);
-      transition: background .15s;
+      box-shadow: var(--shadow-md);
+      transition: transform .15s ease-out, box-shadow .15s ease-out;
       -webkit-tap-highlight-color: transparent;
     }
 
-    .next-btn:hover { background: var(--blue-dark); }
+    .next-btn:active {
+      transform: translate(4px, 4px);
+      box-shadow: none;
+    }
 
-    /* Auto-reset countdown hint */
     #autoResetMsg {
-      margin-top: 14px;
-      font-size: .8rem;
-      color: var(--slate-300);
+      margin-top: 16px;
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--black);
+      opacity: 0.25;
     }
 
     /* ============================================================
-       LOADING OVERLAY — covers the whole screen during server calls
+       LOADING OVERLAY — constructivist style
        ============================================================ */
     #loadingOverlay {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(255,255,255,.75);
-      backdrop-filter: blur(3px);
+      background: rgba(240,240,240,.85);
       z-index: 50;
       flex-direction: column;
       align-items: center;
@@ -481,44 +750,77 @@
     .spinner {
       width: 48px;
       height: 48px;
-      border: 5px solid var(--slate-200);
-      border-top-color: var(--blue);
-      border-radius: 50%;
-      animation: spin .75s linear infinite;
+      border: var(--border-lg) solid var(--muted);
+      border-top-color: var(--red);
+      border-right-color: var(--blue);
+      border-radius: 0;
+      animation: spin .6s linear infinite;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
     .loading-msg {
-      font-size: 1rem;
-      font-weight: 600;
-      color: var(--slate-600);
+      font-size: .85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--black);
     }
 
     /* ============================================================
-       TOAST — slides up from the bottom for errors / notices
+       TOAST — Bauhaus stark notification
        ============================================================ */
     #toast {
       position: fixed;
       bottom: 24px;
       left: 50%;
-      transform: translateX(-50%) translateY(120px); /* hidden off-screen */
-      background: var(--slate-800);
+      transform: translateX(-50%) translateY(120px);
+      background: var(--black);
       color: var(--white);
-      padding: 16px 26px;
-      border-radius: var(--radius-md);
-      font-size: .95rem;
-      font-weight: 600;
-      box-shadow: 0 8px 28px rgba(0,0,0,.2);
-      transition: transform .3s ease;
+      padding: 14px 24px;
+      border: var(--border-sm) solid var(--black);
+      border-radius: 0;
+      font-family: 'Outfit', sans-serif;
+      font-size: .85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      box-shadow: var(--shadow-sm);
+      transition: transform .2s ease-out;
       z-index: 100;
       max-width: 92vw;
       text-align: center;
-      white-space: pre-line;  /* respect \n in messages */
+      white-space: pre-line;
     }
 
-    #toast.is-error   { background: var(--red); }
+    #toast.is-error {
+      background: var(--red);
+      border-color: var(--black);
+    }
+
     #toast.is-visible { transform: translateX(-50%) translateY(0); }
+
+    /* ============================================================
+       RESPONSIVE — scale borders/shadows on mobile
+       ============================================================ */
+    @media (max-width: 480px) {
+      .banner__title {
+        font-size: 1.75rem;
+      }
+
+      .pass-header__name {
+        font-size: 1.75rem;
+      }
+
+      #timerDisplay {
+        font-size: 3.5rem;
+      }
+
+      .dest-btn {
+        padding: 16px 20px;
+        font-size: 1.1rem;
+      }
+    }
 
   </style>
 </head>
@@ -531,7 +833,7 @@
        ============================================================ -->
   <div id="loadingOverlay" role="status" aria-live="polite">
     <div class="spinner"></div>
-    <div class="loading-msg" id="loadingMsg">Please wait…</div>
+    <div class="loading-msg" id="loadingMsg">Please wait</div>
   </div>
 
   <!-- ============================================================
@@ -552,18 +854,23 @@
     <div id="searchScreen" class="screen active">
 
       <div class="banner">
+        <div class="bauhaus-logo">
+          <div class="bauhaus-logo__circle"></div>
+          <div class="bauhaus-logo__square"></div>
+          <div class="bauhaus-logo__triangle"></div>
+        </div>
         <div class="banner__school"><?= schoolName ?></div>
-        <h1 class="banner__title">Digital Hall Pass</h1>
-        <p  class="banner__sub">Type your name or lunch number to get started</p>
+        <h1 class="banner__title">Digital<br>Hall Pass</h1>
+        <p  class="banner__sub">Type your name or lunch number</p>
       </div>
 
       <div class="card">
         <div class="search-wrap">
-          <span class="search-wrap__icon" aria-hidden="true">🔍</span>
+          <span class="search-wrap__icon" aria-hidden="true">&#9906;</span>
           <input
             type="text"
             id="searchInput"
-            placeholder="Name or lunch number…"
+            placeholder="Name or lunch number"
             autocomplete="off"
             autocorrect="off"
             autocapitalize="words"
@@ -575,7 +882,7 @@
         <!-- Student results appear here as the user types -->
         <div id="resultsList"  style="display:none;"  role="list"></div>
         <div id="emptyState"   style="display:none;">
-          😕 No students found — try a different spelling or your lunch number.
+          No students found — try a different spelling or your lunch number.
         </div>
       </div>
 
@@ -589,8 +896,13 @@
     <div id="destinationScreen" class="screen">
 
       <div class="banner">
+        <div class="bauhaus-logo">
+          <div class="bauhaus-logo__circle"></div>
+          <div class="bauhaus-logo__square"></div>
+          <div class="bauhaus-logo__triangle"></div>
+        </div>
         <div class="banner__school"><?= schoolName ?></div>
-        <h1 class="banner__title">Digital Hall Pass</h1>
+        <h1 class="banner__title">Digital<br>Hall Pass</h1>
       </div>
 
       <div class="card">
@@ -606,7 +918,7 @@
             class="dest-btn dest-btn--bathroom"
             onclick="selectDestination('Bathroom')"
             aria-label="Bathroom">
-            <span class="dest-btn__icon" aria-hidden="true">🚻</span>
+            <span class="dest-btn__icon" aria-hidden="true">&#9632;</span>
             <span>Bathroom</span>
           </button>
 
@@ -614,7 +926,7 @@
             class="dest-btn dest-btn--nurse"
             onclick="selectDestination('Nurse')"
             aria-label="Nurse's Office">
-            <span class="dest-btn__icon" aria-hidden="true">🏥</span>
+            <span class="dest-btn__icon" aria-hidden="true">&#9679;</span>
             <span>Nurse's Office</span>
           </button>
 
@@ -622,12 +934,12 @@
             class="dest-btn dest-btn--office"
             onclick="selectDestination('Office')"
             aria-label="Main Office">
-            <span class="dest-btn__icon" aria-hidden="true">🏫</span>
+            <span class="dest-btn__icon" aria-hidden="true">&#9650;</span>
             <span>Main Office</span>
           </button>
         </div>
 
-        <button class="back-btn" onclick="goBack()">← Back to Search</button>
+        <button class="back-btn" onclick="goBack()">&#8592; Back to Search</button>
       </div>
 
     </div><!-- /#destinationScreen -->
@@ -640,14 +952,19 @@
     <div id="activeScreen" class="screen">
 
       <div class="banner">
+        <div class="bauhaus-logo">
+          <div class="bauhaus-logo__circle"></div>
+          <div class="bauhaus-logo__square"></div>
+          <div class="bauhaus-logo__triangle"></div>
+        </div>
         <div class="banner__school"><?= schoolName ?></div>
       </div>
 
       <div class="pass-card">
 
-        <!-- Coloured header with student name -->
+        <!-- Blue header with student name -->
         <div class="pass-header">
-          <div class="pass-header__status">✅ Pass Active</div>
+          <div class="pass-header__status">&#9632; Pass Active</div>
           <div class="pass-header__name" id="passStudentName"></div>
         </div>
 
@@ -665,10 +982,9 @@
 
           <!--
             Timer alert — hidden until the student exceeds 5 minutes.
-            When visible, the timer text above is also red and bold (via .is-alert).
           -->
           <div id="timerAlert" role="alert">
-            ⚠️ Please return to class — you've been gone too long!
+            &#9888; Please return to class
           </div>
 
           <!-- Exact sign-out time for teacher reference -->
@@ -676,7 +992,7 @@
 
           <!-- Large red return button -->
           <button id="returnBtn" onclick="returnToClass()">
-            ✅ Return to Class
+            &#9654; Return to Class
           </button>
 
         </div><!-- /.pass-body -->
@@ -693,12 +1009,17 @@
     <div id="successScreen" class="screen">
 
       <div class="banner">
+        <div class="bauhaus-logo">
+          <div class="bauhaus-logo__circle"></div>
+          <div class="bauhaus-logo__square"></div>
+          <div class="bauhaus-logo__triangle"></div>
+        </div>
         <div class="banner__school"><?= schoolName ?></div>
       </div>
 
       <div class="card success-card">
-        <div class="success-card__icon" aria-hidden="true">🎉</div>
-        <div class="success-card__title">Welcome Back!</div>
+        <div class="success-card__icon" aria-hidden="true">&#9733;</div>
+        <div class="success-card__title">Welcome Back</div>
         <div class="success-card__name"     id="successName"></div>
         <div class="success-card__duration" id="successDuration"></div>
         <button class="next-btn" onclick="resetKiosk()">
@@ -741,7 +1062,7 @@
     let autoResetTimeout = null;
 
     // ── Destination display helpers ──────────────────────────────
-    const DEST_ICON  = { Bathroom: '🚻', Nurse: '🏥', Office: '🏫' };
+    const DEST_ICON  = { Bathroom: '\u25A0', Nurse: '\u25CF', Office: '\u25B2' };
     const DEST_LABEL = { Bathroom: 'Bathroom', Nurse: "Nurse's Office", Office: 'Main Office' };
 
 
@@ -765,7 +1086,7 @@
     // ============================================================
 
     function showLoading(msg) {
-      document.getElementById('loadingMsg').textContent = msg || 'Please wait…';
+      document.getElementById('loadingMsg').textContent = msg || 'Please wait';
       document.getElementById('loadingOverlay').classList.add('is-visible');
     }
 
@@ -894,7 +1215,7 @@
     function selectDestination(destination) {
       if (!selectedStudent) { resetKiosk(); return; }
 
-      showLoading('Checking hallway capacity…');
+      showLoading('Checking hallway capacity');
 
       google.script.run
         .withSuccessHandler(result => {
@@ -942,7 +1263,7 @@
     function _showActivePass(student, destination, timeOut) {
       // Populate card fields
       document.getElementById('passStudentName').textContent = student.name;
-      document.getElementById('passDestIcon').textContent    = DEST_ICON[destination]  || '📍';
+      document.getElementById('passDestIcon').textContent    = DEST_ICON[destination]  || '\u25CF';
       document.getElementById('passDestText').textContent    = DEST_LABEL[destination] || destination;
 
       // Format time-out label  e.g. "Signed out at 2:35 PM"
@@ -984,8 +1305,6 @@
         timerEl.textContent = display;
 
         // ── 5-MINUTE ALERT ──────────────────────────────────────
-        // Requirements: "If the live timer exceeds 5 minutes, the
-        // timer text should turn bold red."
         if (elapsed >= 300) {           // 300 seconds = 5 minutes
           timerEl.classList.add('is-alert');
           alertEl.classList.add('is-visible');
@@ -1020,7 +1339,7 @@
       document.getElementById('returnBtn').disabled = true;
       _stopTimer();
 
-      showLoading('Logging your return…');
+      showLoading('Logging your return');
 
       google.script.run
         .withSuccessHandler(result => {
@@ -1060,13 +1379,13 @@
       // Auto-reset countdown
       let secs = 8;
       document.getElementById('autoResetMsg').textContent =
-        'This screen will reset in ' + secs + ' seconds…';
+        'This screen will reset in ' + secs + ' seconds';
 
       const countInterval = setInterval(() => {
         secs--;
         if (secs > 0) {
           document.getElementById('autoResetMsg').textContent =
-            'This screen will reset in ' + secs + ' seconds…';
+            'This screen will reset in ' + secs + ' seconds';
         } else {
           clearInterval(countInterval);
         }
