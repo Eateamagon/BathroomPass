@@ -32,6 +32,7 @@
       --white:       #FFFFFF;
       --bg:          #F0F0F0;
       --muted:       #E0E0E0;
+      --green:       #1A7A3C;
 
       /* Borders & Shadows — constructivist, hard-edged */
       --border-sm:   2px;
@@ -168,6 +169,12 @@
       opacity: 0.6;
       text-transform: uppercase;
       letter-spacing: .05em;
+    }
+
+    /* Stripped-down banner for screens 3 & 4 — just the school name */
+    .banner--compact {
+      padding: 10px 0 12px;
+      margin-bottom: 16px;
     }
 
     /* ============================================================
@@ -427,7 +434,7 @@
       margin-top: 16px;
       padding: 14px;
       background: var(--white);
-      border: var(--border-sm) solid var(--black);
+      border: var(--border-lg) solid var(--black);
       border-radius: 0;
       font-family: 'Outfit', sans-serif;
       font-size: .9rem;
@@ -458,7 +465,7 @@
       position: relative;
     }
 
-    /* Blue header — constructivist block */
+    /* Header — constructivist block; color set by JS via dest class */
     .pass-header {
       background: var(--blue);
       color: var(--white);
@@ -467,7 +474,12 @@
       border-bottom: var(--border-lg) solid var(--black);
       position: relative;
       overflow: hidden;
+      transition: background .2s ease-out;
     }
+
+    .pass-header--bathroom { background: var(--blue); }
+    .pass-header--nurse    { background: var(--red);  }
+    .pass-header--office   { background: var(--black); }
 
     /* Decorative geometric shapes in pass header */
     .pass-header::before {
@@ -521,7 +533,7 @@
       text-align: center;
     }
 
-    /* Destination pill — Bauhaus style with border */
+    /* Destination pill — Bauhaus style with border; color matches dest */
     .pass-dest {
       display: inline-flex;
       align-items: center;
@@ -530,14 +542,18 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .05em;
-      color: var(--black);
-      background: var(--yellow);
+      color: var(--white);
+      background: var(--blue);
       padding: 10px 24px;
       border: var(--border-sm) solid var(--black);
       border-radius: 0;
       margin-bottom: 28px;
       box-shadow: var(--shadow-sm);
     }
+
+    .pass-dest--bathroom { background: var(--blue);   color: var(--white); }
+    .pass-dest--nurse    { background: var(--red);    color: var(--white); }
+    .pass-dest--office   { background: var(--yellow); color: var(--black); }
 
     .pass-dest__icon { font-size: 1.4rem; }
 
@@ -631,10 +647,10 @@
       position: relative;
     }
 
-    /* Override the default card corner decoration for success — use blue square */
+    /* Override the default card corner decoration for success — use green circle */
     .success-card.card::after {
-      background: var(--blue);
-      border-radius: 0;
+      background: var(--green);
+      border-radius: 9999px;
       width: 14px;
       height: 14px;
     }
@@ -674,7 +690,7 @@
       display: block;
       width: 60px;
       height: 4px;
-      background: var(--yellow);
+      background: var(--green);
       margin: 8px auto 0;
     }
 
@@ -700,7 +716,7 @@
 
     .next-btn {
       padding: 16px 40px;
-      background: var(--blue);
+      background: var(--green);
       color: var(--white);
       border: var(--border-lg) solid var(--black);
       border-radius: 0;
@@ -866,7 +882,7 @@
 
       <div class="card">
         <div class="search-wrap">
-          <span class="search-wrap__icon" aria-hidden="true">&#9906;</span>
+          <span class="search-wrap__icon" aria-hidden="true">🔍</span>
           <input
             type="text"
             id="searchInput"
@@ -918,7 +934,7 @@
             class="dest-btn dest-btn--bathroom"
             onclick="selectDestination('Bathroom')"
             aria-label="Bathroom">
-            <span class="dest-btn__icon" aria-hidden="true">&#9632;</span>
+            <span class="dest-btn__icon" aria-hidden="true">🚻</span>
             <span>Bathroom</span>
           </button>
 
@@ -926,7 +942,7 @@
             class="dest-btn dest-btn--nurse"
             onclick="selectDestination('Nurse')"
             aria-label="Nurse's Office">
-            <span class="dest-btn__icon" aria-hidden="true">&#9679;</span>
+            <span class="dest-btn__icon" aria-hidden="true">🩺</span>
             <span>Nurse's Office</span>
           </button>
 
@@ -934,7 +950,7 @@
             class="dest-btn dest-btn--office"
             onclick="selectDestination('Office')"
             aria-label="Main Office">
-            <span class="dest-btn__icon" aria-hidden="true">&#9650;</span>
+            <span class="dest-btn__icon" aria-hidden="true">🏫</span>
             <span>Main Office</span>
           </button>
         </div>
@@ -951,12 +967,7 @@
          ══════════════════════════════════════════════════════════ -->
     <div id="activeScreen" class="screen">
 
-      <div class="banner">
-        <div class="bauhaus-logo">
-          <div class="bauhaus-logo__circle"></div>
-          <div class="bauhaus-logo__square"></div>
-          <div class="bauhaus-logo__triangle"></div>
-        </div>
+      <div class="banner banner--compact">
         <div class="banner__school"><?= schoolName ?></div>
       </div>
 
@@ -964,7 +975,7 @@
 
         <!-- Blue header with student name -->
         <div class="pass-header">
-          <div class="pass-header__status">&#9632; Pass Active</div>
+          <div class="pass-header__status">● Pass Active</div>
           <div class="pass-header__name" id="passStudentName"></div>
         </div>
 
@@ -984,7 +995,7 @@
             Timer alert — hidden until the student exceeds 5 minutes.
           -->
           <div id="timerAlert" role="alert">
-            &#9888; Please return to class
+            ⚠ Please return to class
           </div>
 
           <!-- Exact sign-out time for teacher reference -->
@@ -992,7 +1003,7 @@
 
           <!-- Large red return button -->
           <button id="returnBtn" onclick="returnToClass()">
-            &#9654; Return to Class
+            ← Return to Class
           </button>
 
         </div><!-- /.pass-body -->
@@ -1008,22 +1019,17 @@
          ══════════════════════════════════════════════════════════ -->
     <div id="successScreen" class="screen">
 
-      <div class="banner">
-        <div class="bauhaus-logo">
-          <div class="bauhaus-logo__circle"></div>
-          <div class="bauhaus-logo__square"></div>
-          <div class="bauhaus-logo__triangle"></div>
-        </div>
+      <div class="banner banner--compact">
         <div class="banner__school"><?= schoolName ?></div>
       </div>
 
       <div class="card success-card">
-        <div class="success-card__icon" aria-hidden="true">&#9733;</div>
+        <div class="success-card__icon" aria-hidden="true">✅</div>
         <div class="success-card__title">Welcome Back</div>
         <div class="success-card__name"     id="successName"></div>
         <div class="success-card__duration" id="successDuration"></div>
         <button class="next-btn" onclick="resetKiosk()">
-          Done — Next Student
+          Next Student →
         </button>
         <div id="autoResetMsg"></div>
       </div>
@@ -1062,8 +1068,9 @@
     let autoResetTimeout = null;
 
     // ── Destination display helpers ──────────────────────────────
-    const DEST_ICON  = { Bathroom: '\u25A0', Nurse: '\u25CF', Office: '\u25B2' };
+    const DEST_ICON  = { Bathroom: '🚻', Nurse: '🩺', Office: '🏫' };
     const DEST_LABEL = { Bathroom: 'Bathroom', Nurse: "Nurse's Office", Office: 'Main Office' };
+    const DEST_CLASS = { Bathroom: 'bathroom', Nurse: 'nurse', Office: 'office' };
 
 
     // ============================================================
@@ -1263,8 +1270,15 @@
     function _showActivePass(student, destination, timeOut) {
       // Populate card fields
       document.getElementById('passStudentName').textContent = student.name;
-      document.getElementById('passDestIcon').textContent    = DEST_ICON[destination]  || '\u25CF';
+      document.getElementById('passDestIcon').textContent    = DEST_ICON[destination]  || '📍';
       document.getElementById('passDestText').textContent    = DEST_LABEL[destination] || destination;
+
+      // Apply destination color to header and pill
+      const destKey = DEST_CLASS[destination] || 'bathroom';
+      const header  = document.querySelector('.pass-header');
+      const pill    = document.querySelector('.pass-dest');
+      header.className = 'pass-header pass-header--' + destKey;
+      pill.className   = 'pass-dest pass-dest--' + destKey;
 
       // Format time-out label  e.g. "Signed out at 2:35 PM"
       const h    = timeOut.getHours();
