@@ -51,7 +51,7 @@ const SCHOOL_NAME = 'Kate Collins Middle School';
 
 
 // ============================================================
-//  SHEET NAME CONSTANTS  ← Must match your tab names exactly
+//  SHEET NAME CONSTANTS
 // ============================================================
 
 const TAB_STUDENTS = 'Students';
@@ -60,41 +60,58 @@ const TAB_LOG      = 'Pass Log';
 
 
 // ============================================================
-//  INTERNAL HELPERS
+//  DHB: INTERNAL DATA HELPER (Minimized API Calls)
 // ============================================================
 
 /**
- * Returns a Sheet object by tab name.
- * The script must be "bound" to the spreadsheet (opened via
- * Extensions → Apps Script inside the Sheet).
- *
- * @param {string} tabName
- * @returns {GoogleAppsScript.Spreadsheet.Sheet}
+ * DB helper object to centralize and cache sheet access.
+ * Reduces redundant calls to SpreadsheetApp.getActiveSpreadsheet().
  */
-function _getSheet(tabName) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(tabName);
-  if (!sheet) {
-    throw new Error(
-      'Could not find a tab named "' + tabName + '". ' +
-      'Please check your Google Sheet tab names match the constants in Code.gs.'
-    );
+const DB = {
+  _ss: null,
+  _sheets: {},
+
+  get ss() {
+    if (!this._ss) this._ss = SpreadsheetApp.getActiveSpreadsheet();
+    return this._ss;
+  },
+
+  getSheet(name) {
+    if (!this._sheets[name]) {
+      this._sheets[name] = this.ss.getSheetByName(name);
+      if (!this._sheets[name]) {
+        throw new Error(`Sheet tab "${name}" not found. Verify your Google Sheet setup.`);
+      }
+    }
+    return this._sheets[name];
+  },
+
+  /**
+   * Fetches all data for a tab, including headers.
+   * Caches the values for the duration of one request.
+   */
+  _values: {},
+  getValues(name) {
+    if (!this._values[name]) {
+      this._values[name] = this.getSheet(name).getDataRange().getValues();
+    }
+    return this._values[name];
+  },
+
+  /**
+   * Force refresh values from the sheet (useful after appendRow/deleteRow)
+   */
+  refresh(name) {
+    delete this._values[name];
   }
-  return sheet;
-}
+};
+
 
 /**
- * Formats a JavaScript Date to a readable 12-hour time string.
- * Example output: "Mar 9, 2026 2:35 PM"
- *
- * @param {Date} date
- * @returns {string}
+ * Formats a Date to a readable string based on script timezone.
  */
 function _formatTime(date) {
-  return Utilities.formatDate(
-    date,
-    Session.getScriptTimeZone(),
-    'MMM d, yyyy h:mm a'
-  );
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), 'MMM d, yyyy h:mm a');
 }
 
 
@@ -103,16 +120,14 @@ function _formatTime(date) {
 // ============================================================
 
 /**
- * Called automatically when someone visits the deployed web-app URL.
- * Renders Index.html and passes the school name as a template variable.
+ * Serve the single-page application.
  */
 function doGet() {
   const template = HtmlService.createTemplateFromFile('Index');
-  template.schoolName = SCHOOL_NAME;          // injected into <?= schoolName ?>
+  template.schoolName = SCHOOL_NAME;
 
   return template.evaluate()
-    .setTitle('Digital Hall Pass — ' + SCHOOL_NAME)
-    // ALLOWALL lets the page be displayed inside an iframe (e.g. Chromebook kiosk tab).
+    .setTitle(`Digital Hall Pass — ${SCHOOL_NAME}`)
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
 }
@@ -123,36 +138,23 @@ function doGet() {
 // ============================================================
 
 /**
- * Searches the Students tab by partial name OR partial student ID.
- * Called from the frontend as the student types in the search box.
- *
- * @param {string} query  - Text the student has typed (min 2 chars).
- * @returns {Array<{id: string, name: string, grade: string|number}>}
- *          Up to 10 matching students (empty array if no match).
+ * Searches students by name or ID (Column A or B).
+ * Returns up to 10 results.
  */
 function searchStudents(query) {
-  // Reject searches that are too short to be meaningful.
-  if (!query || query.trim().length < 2) return [];
+  const term = query?.trim().toLowerCase();
+  if (!term || term.length < 2) return [];
 
-  const sheet = _getSheet(TAB_STUDENTS);
-  const rows  = sheet.getDataRange().getValues(); // includes header row
-  const term  = query.trim().toLowerCase();
+  const rows = DB.getValues(TAB_STUDENTS);
   const found = [];
 
-  // Row 0 is the header, so we start at index 1.
+  // Skip header (i=1)
   for (let i = 1; i < rows.length; i++) {
-    const rowId   = String(rows[i][0]).toLowerCase(); // Column A: Student ID
-    const rowName = String(rows[i][1]).toLowerCase(); // Column B: Name
-
-    if (rowId.includes(term) || rowName.includes(term)) {
-      found.push({
-        id:    rows[i][0],   // Return original (not lowercased) values
-        name:  rows[i][1],
-        grade: rows[i][2]    // Column C: Grade Level
-      });
+    const [id, name, grade] = rows[i];
+    if (String(id).toLowerCase().includes(term) || String(name).toLowerCase().includes(term)) {
+      found.push({ id, name, grade });
     }
-
-    if (found.length >= 10) break; // Cap results to keep the list tidy
+    if (found.length >= 10) break;
   }
 
   return found;
@@ -160,213 +162,95 @@ function searchStudents(query) {
 
 
 // ============================================================
-//  CAPACITY & VALIDATION CHECKS
+//  HALL PASS OPERATIONS
 // ============================================================
 
 /**
- * Counts how many students from a specific grade are currently
- * listed in the "Active Passes" tab.
- *
- * @param {string|number} grade
- * @returns {number}
- */
-function _getActiveCountForGrade(grade) {
-  const sheet = _getSheet(TAB_ACTIVE);
-  const rows  = sheet.getDataRange().getValues();
-  let   count = 0;
-
-  for (let i = 1; i < rows.length; i++) {
-    // Column C (index 2) holds the grade level.
-    if (String(rows[i][2]) === String(grade)) count++;
-  }
-  return count;
-}
-
-/**
- * Returns true if the student already has an open (unreturned) pass.
- *
- * @param {string|number} studentId
- * @returns {boolean}
- */
-function _hasActivePass(studentId) {
-  const sheet = _getSheet(TAB_ACTIVE);
-  const rows  = sheet.getDataRange().getValues();
-
-  for (let i = 1; i < rows.length; i++) {
-    // Column B (index 1) holds the student ID.
-    if (String(rows[i][1]) === String(studentId)) return true;
-  }
-  return false;
-}
-
-
-// ── DAILY LIMIT CHECK (DISABLED) ─────────────────────────────
-/**
- * Checks whether a student has hit their daily pass limit.
- *
- * HOW TO ENABLE:
- *   1. Uncomment the two constant lines near the top of the file
- *      (DAILY_LIMIT_ENABLED and DAILY_LIMIT_MAX).
- *   2. Uncomment the checkDailyLimit() call inside issuePass().
- *
- * @param {string|number} studentId
- * @returns {{ allowed: boolean, tripsToday: number }}
- */
-// function checkDailyLimit(studentId) {
-//   if (!DAILY_LIMIT_ENABLED) return { allowed: true, tripsToday: 0 };
-//
-//   const sheet      = _getSheet(TAB_LOG);
-//   const rows       = sheet.getDataRange().getValues();
-//   const tz         = Session.getScriptTimeZone();
-//   const todayStr   = Utilities.formatDate(new Date(), tz, 'yyyy-MM-dd');
-//   let   tripsToday = 0;
-//
-//   for (let i = 1; i < rows.length; i++) {
-//     const rowId   = String(rows[i][1]);   // Column B: Student ID
-//     const timeOut = rows[i][4];            // Column E: Time Out
-//
-//     if (rowId === String(studentId) && timeOut instanceof Date) {
-//       const rowDate = Utilities.formatDate(timeOut, tz, 'yyyy-MM-dd');
-//       if (rowDate === todayStr) tripsToday++;
-//     }
-//   }
-//
-//   return {
-//     allowed:    tripsToday < DAILY_LIMIT_MAX,
-//     tripsToday: tripsToday
-//   };
-// }
-// ─────────────────────────────────────────────────────────────
-
-
-// ============================================================
-//  ISSUE A HALL PASS
-// ============================================================
-
-/**
- * Validates all school rules, then (if approved) writes a new
- * row to "Active Passes" and returns the server timestamp to the
- * client so its live timer stays in sync.
- *
- * Validation order:
- *   1. Student doesn't already have an open pass.
- *   2. Grade-level hallway capacity is not exceeded.
- *   3. (Disabled) Daily pass limit not exceeded.
- *
- * @param {{ id: string, name: string, grade: string|number }} student
- * @param {string} destination  'Bathroom' | 'Nurse' | 'Office'
- * @returns {{ success: boolean, message: string, timeOut?: string }}
- *          timeOut is an ISO-8601 string used by the client timer.
+ * Main action to start a pass. Validates rules before writing.
  */
 function issuePass(student, destination) {
+  try {
+    const activeRows = DB.getValues(TAB_ACTIVE);
+    let gradeCount = 0;
 
-  // ── Check 1: Prevent issuing a second pass to the same student ──
-  if (_hasActivePass(student.id)) {
+    // Single pass to check BOTH current status and grade capacity
+    for (let i = 1; i < activeRows.length; i++) {
+      // Column B: Student ID
+      if (String(activeRows[i][1]) === String(student.id)) {
+        return { success: false, message: `${student.name} already has an active pass.` };
+      }
+      // Column C: Grade
+      if (String(activeRows[i][2]) === String(student.grade)) {
+        gradeCount++;
+      }
+    }
+
+    if (gradeCount >= MAX_PER_GRADE) {
+      return {
+        success: false,
+        message: `Grade ${student.grade} capacity reached. Please wait for a classmate.`
+      };
+    }
+
+    // Daily limit check (Optional logic could go here)
+
+    const timeOut = new Date();
+    DB.getSheet(TAB_ACTIVE).appendRow([
+      student.name,
+      student.id,
+      student.grade,
+      destination,
+      timeOut
+    ]);
+
+    Logger.log(`ISSUE | ${student.name} (${student.id}) -> ${destination}`);
+
     return {
-      success: false,
-      message: student.name + ' already has an active pass. Please return to class first.'
+      success: true,
+      message: 'Pass issued!',
+      timeOut: timeOut.toISOString()
     };
+  } catch (err) {
+    Logger.log(`ERROR issuePass: ${err.message}`);
+    return { success: false, message: 'Server error. Please notify a teacher.' };
   }
-
-  // ── Check 2: Grade-level hallway capacity ──────────────────────
-  const gradeCount = _getActiveCountForGrade(student.grade);
-  if (gradeCount >= MAX_PER_GRADE) {
-    return {
-      success: false,
-      message:
-        'The hallways are at capacity for Grade ' + student.grade + '. ' +
-        'Please wait for a classmate to return before leaving.'
-    };
-  }
-
-  // ── Check 3: Daily limit (DISABLED — uncomment to enable) ──────
-  // const limitCheck = checkDailyLimit(student.id);
-  // if (!limitCheck.allowed) {
-  //   return {
-  //     success: false,
-  //     message:
-  //       'You have used all ' + DAILY_LIMIT_MAX + ' of your hall passes for today. ' +
-  //       'Please see your teacher.'
-  //   };
-  // }
-
-  // ── All checks passed — write the active pass record ───────────
-  const timeOut = new Date();
-  _getSheet(TAB_ACTIVE).appendRow([
-    student.name,    // Column A
-    student.id,      // Column B
-    student.grade,   // Column C
-    destination,     // Column D
-    timeOut          // Column E  (stored as a Date; Google Sheets formats it automatically)
-  ]);
-
-  Logger.log('PASS ISSUED | %s (ID: %s, Grade: %s) → %s | Out: %s',
-    student.name, student.id, student.grade, destination, _formatTime(timeOut));
-
-  return {
-    success: true,
-    message: 'Pass issued!',
-    timeOut: timeOut.toISOString()  // Client uses this to start its live countdown timer
-  };
 }
-
-
-// ============================================================
-//  RETURN STUDENT TO CLASS
-// ============================================================
 
 /**
- * Finds the student's row in "Active Passes", calculates how long
- * they were out, appends a complete record to "Pass Log", then
- * deletes the row from "Active Passes".
- *
- * @param {string|number} studentId
- * @returns {{ success: boolean, message: string, duration?: string }}
- *          duration is a formatted string like "4.72 minutes".
+ * Returns a student: calculates duration, logs it, and removes active row.
  */
 function returnStudent(studentId) {
-  const activeSheet = _getSheet(TAB_ACTIVE);
-  const logSheet    = _getSheet(TAB_LOG);
-  const rows        = activeSheet.getDataRange().getValues();
+  try {
+    const sheet = DB.getSheet(TAB_ACTIVE);
+    const rows  = DB.getValues(TAB_ACTIVE);
 
-  for (let i = 1; i < rows.length; i++) {
-    // Column B (index 1) = Student ID
-    if (String(rows[i][1]) !== String(studentId)) continue;
+    for (let i = 1; i < rows.length; i++) {
+      if (String(rows[i][1]) !== String(studentId)) continue;
 
-    // ── Found the student's active pass ───────────────────────────
-    const name        = rows[i][0];            // Column A
-    const id          = rows[i][1];            // Column B
-    const grade       = rows[i][2];            // Column C
-    const destination = rows[i][3];            // Column D
-    const timeOut     = new Date(rows[i][4]);  // Column E (convert back to Date)
-    const timeIn      = new Date();            // Right now
+      const [name, id, grade, destination, rawTimeOut] = rows[i];
+      const timeIn = new Date();
+      const timeOut = new Date(rawTimeOut);
+      const durationMin = Math.round(((timeIn - timeOut) / 60000) * 100) / 100;
 
-    // Calculate elapsed time in minutes, rounded to 2 decimal places.
-    const durationMs  = timeIn - timeOut;
-    const durationMin = Math.round((durationMs / 60000) * 100) / 100;
+      // Log completion
+      DB.getSheet(TAB_LOG).appendRow([name, id, grade, destination, timeOut, timeIn, durationMin]);
 
-    // ── Write the completed trip to Pass Log ───────────────────────
-    // Columns: Name | Student ID | Grade | Destination | Time Out | Time In | Duration (min)
-    logSheet.appendRow([name, id, grade, destination, timeOut, timeIn, durationMin]);
+      // Remove from active
+      sheet.deleteRow(i + 1);
 
-    // ── Remove from Active Passes ──────────────────────────────────
-    // Sheet row numbers are 1-based; array index i already skips the
-    // header, so the sheet row = i + 1.
-    activeSheet.deleteRow(i + 1);
+      Logger.log(`RETURN | ${name} | ${durationMin} min`);
 
-    Logger.log('RETURNED | %s | Away: %s min | Destination: %s',
-      name, durationMin, destination);
+      return {
+        success: true,
+        message: `${name} returned.`,
+        duration: `${durationMin.toFixed(2)} minutes`
+      };
+    }
 
-    return {
-      success:  true,
-      message:  name + ' has returned to class.',
-      duration: durationMin.toFixed(2) + ' minutes'
-    };
+    return { success: false, message: 'No active pass found for this ID.' };
+  } catch (err) {
+    Logger.log(`ERROR returnStudent: ${err.message}`);
+    return { success: false, message: 'Server error tracking return.' };
   }
-
-  // Student wasn't found in Active Passes.
-  return {
-    success: false,
-    message: 'No active pass was found for this student.'
-  };
 }
+
